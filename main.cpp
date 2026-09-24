@@ -1,4 +1,7 @@
 #include <iostream>
+#include <string>
+#include <cmath>
+#include <cctype>
 
 // Funktion, um das Brett hübsch auf dem Bildschirm auszugeben
 void zeige_brett(char brett[8][8]) {
@@ -18,19 +21,64 @@ void zeige_brett(char brett[8][8]) {
     std::cout << "  a b c d e f g h\n\n";
 }
 
+bool bauer_gueltig(char brett[8][8], char figur, int start_reihe, int start_spalte, int ziel_reihe, int ziel_spalte) {
+    if (figur == 'B') {
+        if (start_spalte == ziel_spalte) {
+            if (start_reihe == 6 && ziel_reihe == 4 && brett[5][start_spalte] == '.' && brett[4][start_spalte] == '.') {
+                return true; // Erster Zug: zwei Felder nach vorne
+            }
+            if (ziel_reihe == start_reihe - 1 && brett[ziel_reihe][ziel_spalte] == '.') {
+                return true; // Normales Vorwärtsziehen
+            }
+        } else if (abs(start_spalte - ziel_spalte) == 1 && ziel_reihe == start_reihe - 1) {
+            if (brett[ziel_reihe][ziel_spalte] != '.' && islower(brett[ziel_reihe][ziel_spalte])) {
+                return true; // Schlagen einer schwarzen Figur
+            }
+        }
+    }
+
+    else if (figur == 'b') {
+        if (start_spalte == ziel_spalte) {
+            if (start_reihe == 1 && ziel_reihe == 3 && brett[2][start_spalte] == '.' && brett[3][start_spalte] == '.') {
+                return true; // Erster Zug: zwei Felder nach vorne
+            }
+            if (ziel_reihe == start_reihe + 1 && brett[ziel_reihe][ziel_spalte] == '.') {
+                return true; // Normales Vorwärtsziehen
+            }
+        } else if (abs(start_spalte - ziel_spalte) == 1 && ziel_reihe == start_reihe + 1) {
+            if (brett[ziel_reihe][ziel_spalte] != '.' && isupper(brett[ziel_reihe][ziel_spalte])) {
+                return true; // Schlagen einer weißen Figur
+            }
+        }
+    }
+
+    return false;
+}
+
 void zug_machen(char brett[8][8], int start_reihe, int start_spalte, int ziel_reihe, int ziel_spalte) {
     char figur = brett[start_reihe][start_spalte];
+    if (bauer_gueltig(brett, figur, start_reihe, start_spalte, ziel_reihe, ziel_spalte)) {
+        std::cout << "Zug ist gültig.\n";
+    } else {
+        std::cout << "Zug ist ungültig.\n";
+        return;
+    }
     brett[start_reihe][start_spalte] = '.';
     brett[ziel_reihe][ziel_spalte] = figur;
 }
 
 
-bool bauer_gueltig(char brett[8][8], char figur, int start_reihe, int start_spalte, int ziel_reihe, int ziel_spalte) {
-    if (figur == 'B') {
-        if()
-    }
 
-    return false;
+void input_zug(char brett[8][8], std::string start_zug, std::string ziel_zug) {
+    int start_reihe = '8' - start_zug[1];
+    int start_spalte = start_zug[0] - 'a';
+    int ziel_reihe = '8' - ziel_zug[1];
+    int ziel_spalte = ziel_zug[0] - 'a';
+
+    std::cout << "Versuche Zug von " << start_zug << " nach " << ziel_zug << " (Array: [" 
+              << start_reihe << "][" << start_spalte << "] -> [" << ziel_reihe << "][" << ziel_spalte << "])\n";
+
+    zug_machen(brett, start_reihe, start_spalte, ziel_reihe, ziel_spalte);
 }
 
 int main() {
@@ -61,8 +109,23 @@ int main() {
     std::cout << "--- Startposition ---";
     zeige_brett(brett);
     
-    zug_machen(brett, 6, 4, 4, 4);
-    zug_machen(brett, 0, 0, 3, 4);
+    //zug_machen(brett, 6, 4, 4, 4);
+    //zug_machen(brett, 1, 3, 3, 3);
+    //zug_machen(brett, 4, 4, 3, 3);
+    while (true) {
+        std::string z1,z2;
+        std::cout << "Was willst du bewegen?: ";
+        std::cin >> z1;
+        std::cout << "Wohin willst du es bewegen?: ";
+        std::cin >> z2;
+        input_zug(brett, z1, z2);
+
+        std::cout << "--- Nach 1. e2-e4 ---";
+        zeige_brett(brett);
+    }
+    
+    //input_zug(brett, "e7", "e5");
+
     /*char figur = brett[6][4];      // Figur auf e2 "aufheben"
     brett[6][4] = '.';             // e2 wird leer
     brett[4][4] = figur;           // Figur auf e4 "abstellen"
@@ -71,8 +134,7 @@ int main() {
     zeige_brett(brett);
     */
 
-    std::cout << "--- Nach 1. e2-e4 ---";
-    zeige_brett(brett);
+    
 
     return 0;
 }
