@@ -43,7 +43,7 @@ bool bauer_gueltig(char brett[8][8], char figur, int start_reihe, int start_spal
                 return true; // Erster Zug: zwei Felder nach vorne
             }
             if (ziel_reihe == start_reihe + 1 && brett[ziel_reihe][ziel_spalte] == '.') {
-                return true; // Normales Vorwärtsziehen
+                return true; // Normales Vporwärtsziehen
             }
         } else if (abs(start_spalte - ziel_spalte) == 1 && ziel_reihe == start_reihe + 1) {
             if (brett[ziel_reihe][ziel_spalte] != '.' && isupper(brett[ziel_reihe][ziel_spalte])) {
@@ -55,14 +55,56 @@ bool bauer_gueltig(char brett[8][8], char figur, int start_reihe, int start_spal
     return false;
 }
 
+bool turm_gueltig(char brett[8][8], char figur, int start_reihe, int start_spalte, int ziel_reihe, int ziel_spalte) {
+    if (start_reihe == ziel_reihe) {
+        // Horizontaler Zug
+        int min_spalte = std::min(start_spalte, ziel_spalte);
+        int max_spalte = std::max(start_spalte, ziel_spalte);
+        for (int spalte = min_spalte + 1; spalte < max_spalte; spalte++) {
+            if (brett[start_reihe][spalte] != '.') {
+                return false; // Ein Hindernis auf dem Weg
+            }
+        }
+        return true;
+    } else if (start_spalte == ziel_spalte) {
+        // Vertikaler Zug
+        int min_reihe = std::min(start_reihe, ziel_reihe);
+        int max_reihe = std::max(start_reihe, ziel_reihe);
+        for (int reihe = min_reihe + 1; reihe < max_reihe; reihe++) {
+            if (brett[reihe][start_spalte] != '.') {
+                return false; // Ein Hindernis auf dem Weg
+            }
+        }
+        return true;
+    }
+    return false; // Ungültiger Turmzug
+}
+
 void zug_machen(char brett[8][8], int start_reihe, int start_spalte, int ziel_reihe, int ziel_spalte) {
     char figur = brett[start_reihe][start_spalte];
-    if (bauer_gueltig(brett, figur, start_reihe, start_spalte, ziel_reihe, ziel_spalte)) {
+
+    if (figur == 'b' || figur == 'B') {
+        if (bauer_gueltig(brett, figur, start_reihe, start_spalte, ziel_reihe, ziel_spalte)) {
         std::cout << "Zug ist gültig.\n";
     } else {
         std::cout << "Zug ist ungültig.\n";
         return;
     }
+    }
+
+    else if (figur == 'T' || figur == 't')
+    {
+        if (turm_gueltig(brett, figur, start_reihe, start_spalte, ziel_reihe, ziel_spalte)) {
+            std::cout << "Zug ist gültig.\n";
+        } else {
+            std::cout << "Zug ist ungültig.\n";
+            return;
+        }
+        /* code */
+    }
+    
+
+    
     brett[start_reihe][start_spalte] = '.';
     brett[ziel_reihe][ziel_spalte] = figur;
 }
