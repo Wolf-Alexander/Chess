@@ -56,6 +56,12 @@ bool bauer_gueltig(char brett[8][8], char figur, int start_reihe, int start_spal
 }
 
 bool turm_gueltig(char brett[8][8], char figur, int start_reihe, int start_spalte, int ziel_reihe, int ziel_spalte) {
+    char gegnerfigur = brett[ziel_reihe][ziel_spalte];
+
+    if (figur != '.' && gegnerfigur != '.' && ((isupper(figur) && isupper(gegnerfigur)) || (islower(figur) && islower(gegnerfigur)))) {
+        return false; // Ungültiger Zug: Turm kann nicht auf eine eigene Figur ziehen
+    }
+
     if (start_reihe == ziel_reihe) {
         // Horizontaler Zug
         int min_spalte = std::min(start_spalte, ziel_spalte);
@@ -80,6 +86,51 @@ bool turm_gueltig(char brett[8][8], char figur, int start_reihe, int start_spalt
     return false; // Ungültiger Turmzug
 }
 
+bool springer_gueltig(char brett[8][8], char figur, int start_reihe, int start_spalte, int ziel_reihe, int ziel_spalte) {
+    char gegnerfigur = brett[ziel_reihe][ziel_spalte];
+
+    if (figur != '.' && gegnerfigur != '.' && ((isupper(figur) && isupper(gegnerfigur)) || (islower(figur) && islower(gegnerfigur)))) {
+        return false; // Ungültiger Zug: Springer kann nicht auf eine eigene Figur ziehen
+    }
+
+    int reihen_diff = std::abs(start_reihe - ziel_reihe);
+    int spalten_diff = std::abs(start_spalte - ziel_spalte);
+
+    return (reihen_diff == 2 && spalten_diff == 1) || (reihen_diff == 1 && spalten_diff == 2);
+}
+
+bool laufer_gueltig(char brett[8][8], char figur, int start_reihe, int start_spalte, int ziel_reihe, int ziel_spalte) {
+    char gegnerfigur = brett[ziel_reihe][ziel_spalte];
+
+    if (figur != '.' && gegnerfigur != '.' && ((isupper(figur) && isupper(gegnerfigur)) || (islower(figur) && islower(gegnerfigur)))) {
+        return false; // Ungültiger Zug: Läufer kann nicht auf eine eigene Figur ziehen
+    }
+
+    int reihen_diff = std::abs(start_reihe - ziel_reihe);
+    int spalten_diff = std::abs(start_spalte - ziel_spalte);
+
+    if (reihen_diff != spalten_diff) {
+        return false; // Ungültiger Zug: Läufer muss diagonal ziehen
+    }
+
+    int reihen_schritt = (ziel_reihe - start_reihe) / reihen_diff;
+    int spalten_schritt = (ziel_spalte - start_spalte) / spalten_diff;
+
+    for (int i = 1; i < reihen_diff; i++) {
+        int zwischen_reihe = start_reihe + i * reihen_schritt;
+        int zwischen_spalte = start_spalte + i * spalten_schritt;
+        if (brett[zwischen_reihe][zwischen_spalte] != '.') {
+            return false; // Ein Hindernis auf dem Weg
+        }
+    }
+    return true;
+}
+
+bool dame_gueltig(char brett[8][8], char figur, int start_reihe, int start_spalte, int ziel_reihe, int ziel_spalte) {
+    return turm_gueltig(brett, figur, start_reihe, start_spalte, ziel_reihe, ziel_spalte) ||
+           laufer_gueltig(brett, figur, start_reihe, start_spalte, ziel_reihe, ziel_spalte);
+}
+
 void zug_machen(char brett[8][8], int start_reihe, int start_spalte, int ziel_reihe, int ziel_spalte) {
     char figur = brett[start_reihe][start_spalte];
 
@@ -100,11 +151,34 @@ void zug_machen(char brett[8][8], int start_reihe, int start_spalte, int ziel_re
             std::cout << "Zug ist ungültig.\n";
             return;
         }
-        /* code */
     }
-    
 
-    
+    else if (figur == 'S' || figur == 's') {
+        if (springer_gueltig(brett, figur, start_reihe, start_spalte, ziel_reihe, ziel_spalte)) {
+            std::cout << "Zug ist gültig.\n";
+        } else {
+            std::cout << "Zug ist ungültig.\n";
+            return;
+        }
+    }
+
+    else if (figur == 'L' || figur == 'l') {
+        if (laufer_gueltig(brett, figur, start_reihe, start_spalte, ziel_reihe, ziel_spalte)) {
+            std::cout << "Zug ist gültig.\n";
+        } else {
+            std::cout << "Zug ist ungültig.\n";
+            return;
+        }
+    }
+
+    else if (figur == 'D' || figur == 'd') {
+        if (dame_gueltig(brett, figur, start_reihe, start_spalte, ziel_reihe, ziel_spalte)) {
+            std::cout << "Zug ist gültig.\n";
+        } else {
+            std::cout << "Zug ist ungültig.\n";
+            return;
+        }
+    }
     brett[start_reihe][start_spalte] = '.';
     brett[ziel_reihe][ziel_spalte] = figur;
 }
