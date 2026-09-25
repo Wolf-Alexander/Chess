@@ -21,37 +21,29 @@ void zeige_brett(char brett[8][8]) {
     std::cout << "  a b c d e f g h\n\n";
 }
 
-bool bauer_gueltig(char brett[8][8], char figur, int start_reihe, int start_spalte, int ziel_reihe, int ziel_spalte) {
-    if (figur == 'B') {
+bool bauer_gueltig(char brett[8][8], char figur, int start_reihe, int start_spalte, int ziel_reihe, int ziel_spalte, int ep_reihe, int ep_spalte) {
+    if (figur == 'B') { // Weißer Bauer
         if (start_spalte == ziel_spalte) {
-            if (start_reihe == 6 && ziel_reihe == 4 && brett[5][start_spalte] == '.' && brett[4][start_spalte] == '.') {
-                return true; // Erster Zug: zwei Felder nach vorne
-            }
-            if (ziel_reihe == start_reihe - 1 && brett[ziel_reihe][ziel_spalte] == '.') {
-                return true; // Normales Vorwärtsziehen
-            }
+            if (start_reihe == 6 && ziel_reihe == 4 && brett[5][start_spalte] == '.' && brett[4][start_spalte] == '.') return true;
+            if (ziel_reihe == start_reihe - 1 && brett[ziel_reihe][ziel_spalte] == '.') return true;
         } else if (abs(start_spalte - ziel_spalte) == 1 && ziel_reihe == start_reihe - 1) {
-            if (brett[ziel_reihe][ziel_spalte] != '.' && islower(brett[ziel_reihe][ziel_spalte])) {
-                return true; // Schlagen einer schwarzen Figur
-            }
+            // Normaler Schlag
+            if (brett[ziel_reihe][ziel_spalte] != '.' && islower(brett[ziel_reihe][ziel_spalte])) return true;
+            // En Passant Schlag: Zielfeld ist leer, aber es ist das markierte En-Passant-Feld
+            if (brett[ziel_reihe][ziel_spalte] == '.' && ziel_reihe == ep_reihe && ziel_spalte == ep_spalte) return true;
         }
     }
-
-    else if (figur == 'b') {
+    else if (figur == 'b') { // Schwarzer Bauer
         if (start_spalte == ziel_spalte) {
-            if (start_reihe == 1 && ziel_reihe == 3 && brett[2][start_spalte] == '.' && brett[3][start_spalte] == '.') {
-                return true; // Erster Zug: zwei Felder nach vorne
-            }
-            if (ziel_reihe == start_reihe + 1 && brett[ziel_reihe][ziel_spalte] == '.') {
-                return true; // Normales Vporwärtsziehen
-            }
+            if (start_reihe == 1 && ziel_reihe == 3 && brett[2][start_spalte] == '.' && brett[3][start_spalte] == '.') return true;
+            if (ziel_reihe == start_reihe + 1 && brett[ziel_reihe][ziel_spalte] == '.') return true;
         } else if (abs(start_spalte - ziel_spalte) == 1 && ziel_reihe == start_reihe + 1) {
-            if (brett[ziel_reihe][ziel_spalte] != '.' && isupper(brett[ziel_reihe][ziel_spalte])) {
-                return true; // Schlagen einer weißen Figur
-            }
+            // Normaler Schlag
+            if (brett[ziel_reihe][ziel_spalte] != '.' && isupper(brett[ziel_reihe][ziel_spalte])) return true;
+            // En Passant Schlag
+            if (brett[ziel_reihe][ziel_spalte] == '.' && ziel_reihe == ep_reihe && ziel_spalte == ep_spalte) return true;
         }
     }
-
     return false;
 }
 
@@ -218,15 +210,14 @@ bool ist_schach(char brett[8][8], bool ist_weiss) {
 }
 
 // Hilfsfunktion: Prüft die grundlegende Bewegung (ohne Schach-Prüfung)
-bool ist_grundsaetzlich_gueltig(char brett[8][8], char figur, int sr, int ss, int zr, int zs) {
+bool ist_grundsaetzlich_gueltig(char brett[8][8], char figur, int sr, int ss, int zr, int zs, int ep_reihe, int ep_spalte) {
     char f = std::tolower(figur);
-    if (f == 'b') return bauer_gueltig(brett, figur, sr, ss, zr, zs);
+    if (f == 'b') return bauer_gueltig(brett, figur, sr, ss, zr, zs, ep_reihe, ep_spalte);
     if (f == 't') return turm_gueltig(brett, figur, sr, ss, zr, zs);
     if (f == 's') return springer_gueltig(brett, figur, sr, ss, zr, zs);
     if (f == 'l') return laufer_gueltig(brett, figur, sr, ss, zr, zs);
     if (f == 'd') return dame_gueltig(brett, figur, sr, ss, zr, zs);
     
-    // König-Logik: Darf sich genau 1 Feld in jede Richtung bewegen
     if (f == 'k') {
         int reihen_diff = std::abs(sr - zr);
         int spalten_diff = std::abs(ss - zs);
@@ -235,7 +226,7 @@ bool ist_grundsaetzlich_gueltig(char brett[8][8], char figur, int sr, int ss, in
     return false;
 }
 
-void zug_machen(char brett[8][8], int start_reihe, int start_spalte, int ziel_reihe, int ziel_spalte) {
+void zug_machen(char brett[8][8], int start_reihe, int start_spalte, int ziel_reihe, int ziel_spalte, int &ep_reihe, int &ep_spalte) {
     char figur = brett[start_reihe][start_spalte];
     if (figur == '.') {
         std::cout << "Dort steht keine Figur!\n";
@@ -245,15 +236,29 @@ void zug_machen(char brett[8][8], int start_reihe, int start_spalte, int ziel_re
     bool ist_weiss = isupper(figur);
 
     // 1. Grundlegende Zugregeln prüfen
-    if (!ist_grundsaetzlich_gueltig(brett, figur, start_reihe, start_spalte, ziel_reihe, ziel_spalte)) {
+    if (!ist_grundsaetzlich_gueltig(brett, figur, start_reihe, start_spalte, ziel_reihe, ziel_spalte, ep_reihe, ep_spalte)) {
         std::cout << "Zug ist nach Grundregeln ungültig.\n";
         return;
     }
 
-    // 2. Zug simulieren (auf dem echten Brett, wir machen es gleich rückgängig)
+    // Prüfen, ob es sich um einen En Passant-Schlag handelt
+    bool ist_en_passant = false;
+    if (std::tolower(figur) == 'b' && start_spalte != ziel_spalte && brett[ziel_reihe][ziel_spalte] == '.') {
+        ist_en_passant = true;
+    }
+
+    // 2. Zug simulieren
     char gemerkte_ziel_figur = brett[ziel_reihe][ziel_spalte];
+    char gemerkter_ep_bauer = '.';
+    
     brett[ziel_reihe][ziel_spalte] = figur;
     brett[start_reihe][start_spalte] = '.';
+    
+    // WICHTIG: Bei En Passant den geschlagenen Bauern temporär entfernen, damit ist_schach() korrekt prüft!
+    if (ist_en_passant) {
+        gemerkter_ep_bauer = brett[start_reihe][ziel_spalte];
+        brett[start_reihe][ziel_spalte] = '.';
+    }
 
     // 3. Prüfen, ob der eigene König jetzt im Schach steht
     if (ist_schach(brett, ist_weiss)) {
@@ -261,31 +266,45 @@ void zug_machen(char brett[8][8], int start_reihe, int start_spalte, int ziel_re
         // 4. Zug rückgängig machen (Undo)
         brett[start_reihe][start_spalte] = figur;
         brett[ziel_reihe][ziel_spalte] = gemerkte_ziel_figur;
+        if (ist_en_passant) {
+            brett[start_reihe][ziel_spalte] = gemerkter_ep_bauer;
+        }
         return;
     }
 
     // 5. Wenn alles okay ist, ist der Zug gültig und bleibt bestehen!
     std::cout << "Zug ist gültig.\n";
     
-    // Optional: Bauern-Umwandlung hier später einfügen
+    // En Passant-Status für den NÄCHSTEN Spieler setzen (nur bei Doppelschritt)
+    int naechste_ep_reihe = -1;
+    int naechste_ep_spalte = -1;
+    if (std::tolower(figur) == 'b' && std::abs(start_reihe - ziel_reihe) == 2) {
+        naechste_ep_reihe = start_reihe + (ziel_reihe - start_reihe) / 2; // Das Feld, das übersprungen wurde
+        naechste_ep_spalte = start_spalte;
+    }
+
+    // Status aktualisieren (da es Referenzen sind, ändert sich das auch in main)
+    ep_reihe = naechste_ep_reihe;
+    ep_spalte = naechste_ep_spalte;
+
+    // Bauern-Umwandlung
     if (std::tolower(figur) == 'b' && (ziel_reihe == 0 || ziel_reihe == 7)) {
-        brett[ziel_reihe][ziel_spalte] = ist_weiss ? 'D' : 'd'; // Automatisch zur Dame
+        brett[ziel_reihe][ziel_spalte] = ist_weiss ? 'D' : 'd';
         std::cout << "Bauer wurde zur Dame befördert!\n";
     }
 }
 
 
 
-void input_zug(char brett[8][8], std::string start_zug, std::string ziel_zug) {
+void input_zug(char brett[8][8], std::string start_zug, std::string ziel_zug, int &ep_reihe, int &ep_spalte) {
     int start_reihe = '8' - start_zug[1];
     int start_spalte = start_zug[0] - 'a';
     int ziel_reihe = '8' - ziel_zug[1];
     int ziel_spalte = ziel_zug[0] - 'a';
 
-    std::cout << "Versuche Zug von " << start_zug << " nach " << ziel_zug << " (Array: [" 
-              << start_reihe << "][" << start_spalte << "] -> [" << ziel_reihe << "][" << ziel_spalte << "])\n";
+    std::cout << "Versuche Zug von " << start_zug << " nach " << ziel_zug << "\n";
 
-    zug_machen(brett, start_reihe, start_spalte, ziel_reihe, ziel_spalte);
+    zug_machen(brett, start_reihe, start_spalte, ziel_reihe, ziel_spalte, ep_reihe, ep_spalte);
 }
 
 int main() {
@@ -316,32 +335,25 @@ int main() {
     std::cout << "--- Startposition ---";
     zeige_brett(brett);
     
-    //zug_machen(brett, 6, 4, 4, 4);
-    //zug_machen(brett, 1, 3, 3, 3);
-    //zug_machen(brett, 4, 4, 3, 3);
+    // LÖSUNG FÜR FEHLER 1: Variablen VOR der Schleife deklarieren!
+    int ep_reihe = -1;
+    int ep_spalte = -1;
+
     while (true) {
-        std::string z1,z2;
+        std::string z1, z2;
         std::cout << "Was willst du bewegen?: ";
         std::cin >> z1;
         std::cout << "Wohin willst du es bewegen?: ";
         std::cin >> z2;
-        input_zug(brett, z1, z2);
+        
+        // Wir übergeben die Variablen, die jetzt dauerhaft existieren
+        input_zug(brett, z1, z2, ep_reihe, ep_spalte);
 
-        std::cout << "--- Nach 1. e2-e4 ---";
+        // LÖSUNG FÜR FEHLER 2: Das if-Statement, das das Brett löscht, ist weg!
+
+        std::cout << "--- Nach dem Zug ---";
         zeige_brett(brett);
     }
     
-    //input_zug(brett, "e7", "e5");
-
-    /*char figur = brett[6][4];      // Figur auf e2 "aufheben"
-    brett[6][4] = '.';             // e2 wird leer
-    brett[4][4] = figur;           // Figur auf e4 "abstellen"
-
-    std::cout << "--- Nach 1. e2-e4 ---";
-    zeige_brett(brett);
-    */
-
-    
-
     return 0;
 }
