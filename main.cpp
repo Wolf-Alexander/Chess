@@ -131,56 +131,147 @@ bool dame_gueltig(char brett[8][8], char figur, int start_reihe, int start_spalt
            laufer_gueltig(brett, figur, start_reihe, start_spalte, ziel_reihe, ziel_spalte);
 }
 
+// Prüft, ob ein bestimmtes Feld von der gegnerischen Farbe bedroht wird
+bool ist_feld_angegriffen(char brett[8][8], int reihe, int spalte, bool ist_weiss) {
+    // 1. Prüfe auf Springer (L-Sprung)
+    char gegner_springer = ist_weiss ? 's' : 'S';
+    int springer_zuege[8][2] = {{-2,-1}, {-2,1}, {-1,-2}, {-1,2}, {1,-2}, {1,2}, {2,-1}, {2,1}};
+    for (int i = 0; i < 8; i++) {
+        int r = reihe + springer_zuege[i][0];
+        int s = spalte + springer_zuege[i][1];
+        if (r >= 0 && r < 8 && s >= 0 && s < 8 && brett[r][s] == gegner_springer) return true;
+    }
+
+    // 2. Prüfe auf König (1 Feld Radius)
+    char gegner_koenig = ist_weiss ? 'k' : 'K';
+    for (int dr = -1; dr <= 1; dr++) {
+        for (int ds = -1; ds <= 1; ds++) {
+            if (dr == 0 && ds == 0) continue;
+            int r = reihe + dr;
+            int s = spalte + ds;
+            if (r >= 0 && r < 8 && s >= 0 && s < 8 && brett[r][s] == gegner_koenig) return true;
+        }
+    }
+
+    // 3. Prüfe auf Bauern (diagonal von vorne)
+    if (ist_weiss) { // Wir sind Weiß, Angreifer ist Schwarz ('b')
+        int angreifer_r = reihe - 1; // Schwarze Bauern kommen von oben (kleinerer Index)
+        if (angreifer_r >= 0) {
+            if (spalte - 1 >= 0 && brett[angreifer_r][spalte - 1] == 'b') return true;
+            if (spalte + 1 < 8 && brett[angreifer_r][spalte + 1] == 'b') return true;
+        }
+    } else { // Wir sind Schwarz, Angreifer ist Weiß ('B')
+        int angreifer_r = reihe + 1; // Weiße Bauern kommen von unten (größerer Index)
+        if (angreifer_r < 8) {
+            if (spalte - 1 >= 0 && brett[angreifer_r][spalte - 1] == 'B') return true;
+            if (spalte + 1 < 8 && brett[angreifer_r][spalte + 1] == 'B') return true;
+        }
+    }
+
+    // 4. Prüfe auf gerade Linien (Turm / Dame)
+    char gegner_turm = ist_weiss ? 't' : 'T';
+    char gegner_dame = ist_weiss ? 'd' : 'D';
+    int gerade_richtungen[4][2] = {{-1,0}, {1,0}, {0,-1}, {0,1}};
+    for (int i = 0; i < 4; i++) {
+        int r = reihe + gerade_richtungen[i][0];
+        int s = spalte + gerade_richtungen[i][1];
+        while (r >= 0 && r < 8 && s >= 0 && s < 8) {
+            if (brett[r][s] != '.') {
+                if (brett[r][s] == gegner_turm || brett[r][s] == gegner_dame) return true;
+                break; // Durch eigene oder andere gegnerische Figur blockiert
+            }
+            r += gerade_richtungen[i][0];
+            s += gerade_richtungen[i][1];
+        }
+    }
+
+    // 5. Prüfe auf diagonale Linien (Läufer / Dame)
+    char gegner_laeufer = ist_weiss ? 'l' : 'L';
+    int diagonal_richtungen[4][2] = {{-1,-1}, {-1,1}, {1,-1}, {1,1}};
+    for (int i = 0; i < 4; i++) {
+        int r = reihe + diagonal_richtungen[i][0];
+        int s = spalte + diagonal_richtungen[i][1];
+        while (r >= 0 && r < 8 && s >= 0 && s < 8) {
+            if (brett[r][s] != '.') {
+                if (brett[r][s] == gegner_laeufer || brett[r][s] == gegner_dame) return true;
+                break;
+            }
+            r += diagonal_richtungen[i][0];
+            s += diagonal_richtungen[i][1];
+        }
+    }
+
+    return false;
+}
+
+// Prüft, ob der König der aktuellen Farbe im Schach steht
+bool ist_schach(char brett[8][8], bool ist_weiss) {
+    char koenig = ist_weiss ? 'K' : 'k';
+    for (int r = 0; r < 8; r++) {
+        for (int s = 0; s < 8; s++) {
+            if (brett[r][s] == koenig) {
+                return ist_feld_angegriffen(brett, r, s, ist_weiss);
+            }
+        }
+    }
+    return false; // Sicherheitshalber, falls König nicht gefunden wird
+}
+
+// Hilfsfunktion: Prüft die grundlegende Bewegung (ohne Schach-Prüfung)
+bool ist_grundsaetzlich_gueltig(char brett[8][8], char figur, int sr, int ss, int zr, int zs) {
+    char f = std::tolower(figur);
+    if (f == 'b') return bauer_gueltig(brett, figur, sr, ss, zr, zs);
+    if (f == 't') return turm_gueltig(brett, figur, sr, ss, zr, zs);
+    if (f == 's') return springer_gueltig(brett, figur, sr, ss, zr, zs);
+    if (f == 'l') return laufer_gueltig(brett, figur, sr, ss, zr, zs);
+    if (f == 'd') return dame_gueltig(brett, figur, sr, ss, zr, zs);
+    
+    // König-Logik: Darf sich genau 1 Feld in jede Richtung bewegen
+    if (f == 'k') {
+        int reihen_diff = std::abs(sr - zr);
+        int spalten_diff = std::abs(ss - zs);
+        return (reihen_diff <= 1 && spalten_diff <= 1 && (reihen_diff + spalten_diff > 0));
+    }
+    return false;
+}
+
 void zug_machen(char brett[8][8], int start_reihe, int start_spalte, int ziel_reihe, int ziel_spalte) {
     char figur = brett[start_reihe][start_spalte];
-
-    if (figur == 'b' || figur == 'B') {
-        if (bauer_gueltig(brett, figur, start_reihe, start_spalte, ziel_reihe, ziel_spalte)) {
-        std::cout << "Zug ist gültig.\n";
-    } else {
-        std::cout << "Zug ist ungültig.\n";
+    if (figur == '.') {
+        std::cout << "Dort steht keine Figur!\n";
         return;
     }
+
+    bool ist_weiss = isupper(figur);
+
+    // 1. Grundlegende Zugregeln prüfen
+    if (!ist_grundsaetzlich_gueltig(brett, figur, start_reihe, start_spalte, ziel_reihe, ziel_spalte)) {
+        std::cout << "Zug ist nach Grundregeln ungültig.\n";
+        return;
     }
 
-    else if (figur == 'T' || figur == 't')
-    {
-        if (turm_gueltig(brett, figur, start_reihe, start_spalte, ziel_reihe, ziel_spalte)) {
-            std::cout << "Zug ist gültig.\n";
-        } else {
-            std::cout << "Zug ist ungültig.\n";
-            return;
-        }
-    }
-
-    else if (figur == 'S' || figur == 's') {
-        if (springer_gueltig(brett, figur, start_reihe, start_spalte, ziel_reihe, ziel_spalte)) {
-            std::cout << "Zug ist gültig.\n";
-        } else {
-            std::cout << "Zug ist ungültig.\n";
-            return;
-        }
-    }
-
-    else if (figur == 'L' || figur == 'l') {
-        if (laufer_gueltig(brett, figur, start_reihe, start_spalte, ziel_reihe, ziel_spalte)) {
-            std::cout << "Zug ist gültig.\n";
-        } else {
-            std::cout << "Zug ist ungültig.\n";
-            return;
-        }
-    }
-
-    else if (figur == 'D' || figur == 'd') {
-        if (dame_gueltig(brett, figur, start_reihe, start_spalte, ziel_reihe, ziel_spalte)) {
-            std::cout << "Zug ist gültig.\n";
-        } else {
-            std::cout << "Zug ist ungültig.\n";
-            return;
-        }
-    }
-    brett[start_reihe][start_spalte] = '.';
+    // 2. Zug simulieren (auf dem echten Brett, wir machen es gleich rückgängig)
+    char gemerkte_ziel_figur = brett[ziel_reihe][ziel_spalte];
     brett[ziel_reihe][ziel_spalte] = figur;
+    brett[start_reihe][start_spalte] = '.';
+
+    // 3. Prüfen, ob der eigene König jetzt im Schach steht
+    if (ist_schach(brett, ist_weiss)) {
+        std::cout << "Zug ist ungültig: Dein König stünde im Schach!\n";
+        // 4. Zug rückgängig machen (Undo)
+        brett[start_reihe][start_spalte] = figur;
+        brett[ziel_reihe][ziel_spalte] = gemerkte_ziel_figur;
+        return;
+    }
+
+    // 5. Wenn alles okay ist, ist der Zug gültig und bleibt bestehen!
+    std::cout << "Zug ist gültig.\n";
+    
+    // Optional: Bauern-Umwandlung hier später einfügen
+    if (std::tolower(figur) == 'b' && (ziel_reihe == 0 || ziel_reihe == 7)) {
+        brett[ziel_reihe][ziel_spalte] = ist_weiss ? 'D' : 'd'; // Automatisch zur Dame
+        std::cout << "Bauer wurde zur Dame befördert!\n";
+    }
 }
 
 
